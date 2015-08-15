@@ -1,0 +1,54 @@
+row, sidebar, item, content{
+  background: RGBA(0,0,0,.2);
+  margin: 1em;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: top;
+  align-content: flex-start;
+}
+row{
+  flex-direction: row;
+  flex-wrap: nowrap;
+}
+sidebar{
+  flex-direction:column;
+}
+content{
+  flex-direction: row;
+  width: 100%
+}
+item{
+  min-height: 100px;
+  flex-grow: 2;
+  width: calc(25% - 3em);
+  min-width: 300px;
+  height: 100px;
+  flex-basis: 0;
+  padding: .5em;
+}
+.item-large{
+  width: calc(33% - 3em);
+  flex-grow: 4;
+}
+
+.item-small{
+  flex-grow: 1;
+  width: calc(12.5% - 3em);
+  width: 150px;
+}
+
+.item-huge{
+  flex-grow: 8;
+  width: calc(50% - 3em);
+}
+
+.item-full{
+  flex-grow: 8;
+  width: 100%;
+}
+
+stuff{
+  display: block;
+  width: 100%;
+  background: RGBA(200,0,20,.5);
+}
