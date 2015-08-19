@@ -1,3 +1,5 @@
+"use strict"
+
 document.addEventListener("DOMContentLoaded", bootstrap);
 
 function bootstrap() {
@@ -13,12 +15,17 @@ function bootstrap() {
             dash.widgets.push(widget);
 
             //download widget config object
-            $.get('widgets/' + widget.name + '/config.js')
+            retry({
+                'initialDelay': config.startBoostrapRetryDelay,
+                'maxDelay': config.maxBootstrapRetryDelay,
+                'giveupDelay': config.boostrapGiveupDelay,
+                'backoff': 2
+                //,'logLevel': 1
+            },
+                $.get('widgets/' + widget.name + '/config.js')
+            )
             .done(function(downloaded) {
                 bootstrapWidget(widget, downloaded);
-            })
-            .fail(function() {
-                retryBootstrap(widget, this);
             });
         });
     });
@@ -62,6 +69,147 @@ function bootstrapWidget(widget, downloaded) {
         update();
     }
 }
+
+
+/*
+New approach: wrapper function that supports
+$.ajax args and returns deferred with extra "run" method, <-- why is this necessary? omit!
+so execution can be controlled separately.
+How to deal with options?
+*/
+function download() {
+    var ajaxArgs        = arguments;
+    var maxDelay        = config.maxBootstrapRetryDelay;
+    var giveupDelay     = config.bootstrapGivupDelay;
+    var backoff         = config.bootstrapBackoffFactor;
+    var logLevel        = config.logLevel;
+    var currentInterval = config.startBoostrapRetryDelay;
+
+    var dfd = new $.Deferred();
+    makeAjax();
+    return dfd;
+
+    function retry() {
+        if (giveupDelay && (currentInterval >= giveupDelay)) {
+            dfd.reject(arguments);
+            return;
+        } else if (currentInterval * backoff >= maxDelay) {
+            currentInterval = maxDelay;
+        } else {
+            currentInterval *= backoff;
+        }
+
+        makeAjax();
+    }
+
+    function makeAjax() {
+        $.ajax(ajaxArgs)
+        .done(function() {
+            dfd.resolve.apply(this, arguments);
+        })
+        .fail(function() {
+            setTimeout(retry, currentInterval)
+        });
+    }
+}
+
+
+/*
+Retry wrapped XHR using a truncated exponential backoff.
+Returns a jQuery deferred object.
+
+Usage: retry(options, xhr).done(doneFunction).fail(failFunction)...
+Args:
+    - options: an object with any of the following options
+        initialDelay: how long to wait before the first retry (default: 100ms)
+        maxDelay: maximum delay between retries (default: 1m)
+        giveupDelay: fail if the total time exceeds this (default: 5m)
+        backoff: exponential backoff factor. 0 means no backoff (default: 2)
+        logLevel: 0-4, maps to DEBUG, INFO, WARNING, ERROR respectively (default: 4)
+    - xhr: the XHR object to retry
+*/
+function retry(options, xhr) {
+    var maxDelay = options.maxDelay || 60000;
+    var giveupDelay = options.giveupDelay || 300000;
+    var backoff = options.backoff === undefined ? 2 : options.backoff;
+    var logLevel = options.logLevel || 4;
+    var currentInterval || options.initialDelay || 100;
+
+    function innerRetry(currentInterval, deferred, arguments) {
+        var nextInterval = currentInterval;
+
+        if (currentInterval >= giveupDelay) {
+            deferred.reject(arguments);
+            return;
+        } else if (currentInterval * 2 >= maxDelay) {
+            nextInterval = maxDelay;
+        } else {
+            nextInterval *= backoff;
+        }
+
+        setTimeout(TODOthing, nextInterval);
+    }
+
+    //this deferred has the user's callbacks, not the actual ajax one
+    var newDeferred = new $.Deferred();
+
+    //if all's well, resolve the wrapper deferred, passing arguments through
+    xhr.done(function() {
+        newDeferred.resolve.apply(this, arguments);
+    });
+    //otherwise, retry
+    xhr.fail(function() {
+        setTimeout(function(){ innerRetry(currentInterval); }, currentInterval);
+    });
+
+    /*
+    1. if xhr.done, resolve wrapper deferred
+    2. if xhr.fail:
+        1. decide on the next interval
+        2. make a copy of the xhr including callbacks
+        3. trigger new xhr at next interval
+
+    But! If we can cancel and copy the request,
+    1. cancel the request and make a reference to it (abort, copy?)
+    2. spawn retries as copies
+
+    Can't copy, but could proxy: take options, spawn as needed.
+    They attach handlers to the deferred returned by the proxy.
+    */
+
+
+
+
+
+
+        if (thisArg.timeoutInterval*2 >= config.maxBootstrapRetryDelay) {
+            thisArg.timeoutInterval = config.maxBootstrapRetryDelay;
+        } else {
+            thisArg.timeoutInterval *= 2;
+        }
+
+        //if it's taken too long and the give-up delay is set, give up
+        if (config.boostrapGiveupDelay) {
+            if (thisArg.totalTime === undefined) {
+                thisArg.totalTime = 0;
+            }
+            if (thisArg.totalTime + thisArg.timeoutInterval > config.boostrapGiveupDelay) {
+                console.log('Failed to download ' + thisArg.url + ' for more than ' +
+                    config.boostrapGiveupDelay/1000 + 's. Giving up');
+                return;
+            } else {
+                thisArg.totalTime += thisArg.timeoutInterval;
+            }
+        } 
+    });
+}
+
+
+
+
+
+
+
 
 /*  
 Retry failed bootstrap requests with a truncated exponential binary backoff
