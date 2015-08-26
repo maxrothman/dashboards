@@ -15,15 +15,7 @@ function bootstrap() {
             dash.widgets.push(widget);
 
             //download widget config object
-            retry({
-                'initialDelay': config.startBoostrapRetryDelay,
-                'maxDelay': config.maxBootstrapRetryDelay,
-                'giveupDelay': config.boostrapGiveupDelay,
-                'backoff': 2
-                //,'logLevel': 1
-            },
-                $.get('widgets/' + widget.name + '/config.js')
-            )
+            download('widgets/' + widget.name + '/config.js')
             .done(function(downloaded) {
                 bootstrapWidget(widget, downloaded);
             });
@@ -49,7 +41,7 @@ function bootstrapWidget(widget, downloaded) {
     $.extend(widget, eval(downloaded));
 
     //add in properties defined in dash. Will override any conflicting properties.
-    widget.el.attributes.forEach(function(atr) { widget[atr.name] = atr.value; });
+    $.each(widget.el.attributes, function(_, atr) { widget[atr.name] = atr.value; });
 
     //bootstrap defined in widget's config.js
     var promise = widget.bootstrap(widget.el);
@@ -70,6 +62,29 @@ function bootstrapWidget(widget, downloaded) {
     }
 }
 
+function updateWidget(widget) {
+    //TODO: memoize for multiple requests for the same file in a single update pass (use a timeout?)
+    //TODO: don't call widget.update when nothing has changed
+    var dataResults = {};
+    var promises = [];
+    $.each(widget.data, function(_, file) {
+        promises.push($.get('data/' + file + '.json'));
+    });
+    
+    //If any of the files fail to download, don't update the widget
+    $.when.apply(this, promises).done(function() {
+        for (var i=0; i<arguments.length; i++) {
+            var file = widget.data[i];
+            var data = arguments[i];
+            dataResults[file] = JSON.parse(data);
+        }
+        widget.update(dataResults);
+    });
+}
+
+function setCurrentDash(index) {
+    //Set the dashboard at `index` as visible and hide all others
+}
 
 /*
 Wrapper around $.ajax that handles retries
@@ -101,7 +116,7 @@ function download() {
     }
 
     function makeAjax() {
-        $.ajax(ajaxArgs)
+        $.ajax.apply(this, ajaxArgs)
         .done(function() {
             dfd.resolve.apply(this, arguments);
         })
@@ -109,27 +124,4 @@ function download() {
             setTimeout(retry, currentInterval)
         });
     }
-}
-
-function updateWidget(widget) {
-    //TODO: memoize
-    var dataResults = {};
-    var promises = [];
-    widget.data.forEach(function(file) {
-        promises.push($.get('data/' + file + '.json'));
-    });
-    
-    //If any of the files fail to download, don't update the widget
-    $.when.apply(this, promises).done(function() {
-        for (var i=0; i<arguments.length; i++) {
-            var file = widgets.data[i];
-            var data = arguments[i];
-            dataResults[file] = JSON.parse(data);
-        }
-        widget.update(dataResults);
-    });
-}
-
-function setCurrentDash(index) {
-    //Set the dashboard at `index` as visible and hide all others
 }
