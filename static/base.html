@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title></title>
+  <link rel="stylesheet" src=static/grid.css>
+  <script type="text/javascript">
+    config = {
+      dashRotationInterval: 60000   //60s
+      widgetUpdateInterval: 20000   //20s
+      startBootstrapRetryDelay: 10  //10ms, after first failure, waits this long to retry. Must be >0
+      bootstrapBackoffFactor: 2     //exponential backoff factor
+      maxBootstrapRetryDelay: 20000 //20s, retry delay tops out at this
+      bootstrapGiveupDelay: 60000   //60s, stops retrying after this much time has passed.
+                                    //If falsy, never gives up (or lets you down)
+      logLevel: 2                   //0-3, DEBUG INFO WARN ERROR
+    };
+  </script>
+  <script type="text/javascript" src="static/base.js"></script>
+</head>
+<body>
+  {{ DASHBOARD GOES HERE }}
+</body>
+</html>

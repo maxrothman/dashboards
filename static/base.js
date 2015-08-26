@@ -1,4 +1,5 @@
 "use strict"
+//TODO: logging
 
 document.addEventListener("DOMContentLoaded", bootstrap);
 
