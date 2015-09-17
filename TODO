@@ -1,6 +1,7 @@
 #TODO
 - test widget bootstrapping and updating
+- test manage.py
 - fill out grid.css (inc. media queries)
-- write manage.py
 - build example data scripts (port over?)
+- write data scripts management command
 - build example widgets
